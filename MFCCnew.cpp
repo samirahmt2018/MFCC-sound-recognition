@@ -11,6 +11,10 @@
 #include <bitset> 
 
 using namespace std;
+struct  MFCC_DATA{
+    long length;
+    double *data;
+};
 void Discrete_Cosine_Transform(int direction, int length, double X[]){
 	double pi = 3.14159265358979323846;
 
@@ -167,7 +171,8 @@ void MFCC(int length_frame, int length_DFT, int number_coefficients, int number_
 	delete[] Xr;
 	delete[] Xi;
 }
-double** findMfcc(float audioData[],int l){
+
+vector<vector<double>> findMfcc(float audioData[],int l){
 	int stride = 160;
 	int length_frame = 400;
 	int length_DFT = 512;
@@ -180,9 +185,10 @@ double** findMfcc(float audioData[],int l){
 	double pi = 3.14159265358979323846;
 
 	double** feature_vector;
-
-	
-
+        vector< vector<double>> mfcc_Data;
+    //     data_holder.length=number_feature_vectors*number_coefficients*3;
+      //  data_holder.data=new double[data_holder.length];
+	//printf("size of mfcc %d",sizeof(MFCCData));
 	feature_vector = new double*[number_feature_vectors = (l - length_frame) / stride + 1];
 
 	for (int i = 0; i < number_feature_vectors; i++){
@@ -233,24 +239,127 @@ double** findMfcc(float audioData[],int l){
 		}
 	}
 
-	FILE *file = fopen("MFCC.txt", "wt");
-        printf("\n Mfcc Data size is %d * %d \n",number_coefficients,number_feature_vectors);
-
+	//FILE *file = fopen("Dr.txt", "w");
+       // printf("\n Mfcc Data size is %d * %d \n",sizeof(feature_vector)[1],sizeof(feature_vector)[0]);
+        int count=0;
 	for (int i = 0; i < number_feature_vectors; i++){
-		for (int j = 0; j < 3 * number_coefficients; j++){
-			fprintf(file, "%lf ", feature_vector[i][j]);
-                        //printf("%lf ",feature_vector[i][j]);
+	    // double power=0;
+             vector<double> rowdata;
+            for (int j = 0; j < 3 * number_coefficients; j++){
+		//   fprintf(file, "%lf ", feature_vector[i][j]);
+                       // printf("%lf ",feature_vector[i][j]);
+                     rowdata.push_back(feature_vector[i][j]);
+                 //  power+=pow(feature_vector[i][j],2);
+                                               // printf("count=%d, feature_vector %f, MFCCData %f \n",count,feature_vector[i][j],MFCCData[count]);
                         
-		}
-		fprintf(file, "\n");
-                //printf("\n ");
+            }
+		
+           //fprintf(file, "%lf ",);
+	    mfcc_Data.push_back(rowdata);
+            rowdata.clear();
+       //  fprintf(file, "\n ");
+           //     printf("\n ");
 	}
-	fclose(file);
+	 //printf("MFCC extracted success size=%d" ,count-1);
+	//fclose(file);
 
 	/*for (int i = 0; i < number_feature_vectors; i++){
 		delete[] feature_vector[i];
-	}
-	delete[] feature_vector;*/
+	}*/
+	delete[] feature_vector;
+       
 
-	return feature_vector;
+	return mfcc_Data;
+        
+}
+double minimum(double x, double y,double z){
+    if(x<y){
+        if(x<z){
+            return x;
+        }
+        else{
+            return z;
+        }
+    }
+    else{
+        if (y<z){
+            return y;
+        }
+        else{
+            return z;
+        }
+    }
+}
+double DTW(vector<vector<double>> &x,vector<vector<double>> &y){
+    long n=x.size();
+    long m=y.size();
+    //printf("\nDTW sizes of n=%d and m=%d and y(m-2,)=%f",n,m,y[m-2][1]);
+    
+    vector <vector <double>> dtw(n, vector<double>(m));
+     vector <vector <double>> dtw2(n, vector<double>(m));
+   
+   /* for(int i=1;i<n;i++){
+        dtw[i][0]=100000.00;
+    }
+    for(int j=1;j<m;j++){
+        dtw[0][j]=100000.00;
+    }
+    dtw[0][0]=0.00;
+    double cost=0;
+     for(int i=1;i<n;i++){
+        for(int j=1;j<m;j++){
+            cost = sqrt(pow((x[i]-y[j]),2)+pow((i/n-j/m),2));
+            dtw[i][j] = cost + minimum(dtw[i-1][j], dtw[i][j-1],dtw[i-1][j-1]);    // match
+            //printf("\nlast i=%d and last j=%d",i,j);
+    }
+    }*/
+     for(int i=0;i<n;i++){
+        for(int j=0;j<m;j++){
+              dtw[i][j] = 0.0; 
+              dtw2[i][j]=100000000.0;// match
+            //printf("\nlast i=%d and last j=%d",i,j);
+    }
+    }
+    
+    for(int i=0;i<n;i++){
+        for(int j=0;j<m;j++){
+            double sum=0;
+            long o=x[i].size();
+            for(int k=0;k<o;k++){
+                sum+=pow((x[i][k]-y[j][k]),2);
+            }
+            dtw[i][j] = sum; 
+            // match
+            //printf("\nlast i=%d and last j=%d",i,j);
+    }
+    }
+    dtw2[0][0]=dtw[0][0];
+     for(int i=1;i<n;i++){
+        for(int j=0;j<m;j++){
+            double D1,D2,D3;
+            D1=dtw2[i-1][j];
+            if(j>0){
+                D2=dtw2[i-1][j-1];
+            }
+            else{
+                D2=100000000.0;
+            }
+            if(j>1){
+                D3=dtw2[i-1][j-2];
+            }
+            else{
+                D3=100000000.0;
+            }
+            dtw2[i][j]=dtw[i][j]+minimum(D1,D2,D3);
+            
+    }
+    }
+   // 
+ /*  printf("\ndistance @(%d,%d) is %lf",0,0,dtw2[0][0]);
+ printf("\ndistance bn (%lf) and (%lf) @(%d,%d) is %lf",x[0],y[0],0,0,dtw[0][0]);
+   printf("\ndistance @(%d,%d) is %lf",1,0,dtw2[1][0]);
+     */      
+    return dtw2[n-1][m-1];
+    
+  //return 0.0;
 }

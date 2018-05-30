@@ -54,7 +54,7 @@
 /* #define DITHER_FLAG     (paDitherOff) */
 #define DITHER_FLAG     (0) /**/
 /** Set to 1 if you want to capture the recording to a file. */
-#define WRITE_TO_FILE   (1)
+#define WRITE_TO_FILE   (0)
 
 /* Select sample format. */
 #if 1
@@ -87,7 +87,8 @@ typedef struct
 }
 paTestData;
 
-
+double *mfcc_data;
+double dtwResult1,dtwResult2,dtwResult3;
 /* This routine will be called by the PortAudio engine when audio is needed.
 ** It may be called at interrupt level on some machines so don't do anything
 ** that could mess up the system like calling malloc() or free().
@@ -193,6 +194,30 @@ static int playCallback( const void *inputBuffer, void *outputBuffer,
     return finished;
 }
 
+vector<vector<double>> readFile(string name){
+    ifstream  file(name);
+    string line; 
+    
+    vector<vector<double>> data;
+    while(getline(file, line))
+    {
+        
+        stringstream  lineStream(line);
+        vector<double> lineData;
+        double value;
+        while(lineStream >> value)
+        {
+              lineData.push_back(value);
+             // printf("%f ",value);
+ 
+        }
+        if(lineData.size()>1){
+        data.push_back(lineData);
+        
+        }
+    }
+    return data;
+}
 /*******************************************************************/
 int main(void);
 int main(void)
@@ -208,9 +233,11 @@ int main(void)
     int                 numBytes;
     SAMPLE              max, val;
     double              average;
-    //vector<float> mfccData;
+    vector<vector<double>> mfccData;
+    vector<vector<double>> mfccRead;
     
-    double** mfccData;
+  
+    //MFCC_DATA mfccData;
     printf("patest_record.c\n"); fflush(stdout);
 
     data.maxFrameIndex = totalFrames = NUM_SECONDS * SAMPLE_RATE; /* Record for a few seconds. */
@@ -283,8 +310,41 @@ int main(void)
     printf("sample max amplitude = %f\n", max );
     printf("sample average = %lf\n", average );
     
-    mfccData=findMfcc(data.recordedSamples,numSamples);
+    mfccData=findMfcc(data.recordedSamples,numSamples); 
+   // printf("MFCC data length is %d and Data %f",mfccData.size(),mfccData.back());
+   // vector<vector<double> >     data;
 
+    // Replace 'Plop' with your file name.
+   
+    // Read one line at a time into the variable line:
+     dtwResult1=DTW(mfccData,mfccData);
+     printf("\nCompare with itself=%f " ,dtwResult1);
+     mfccRead=readFile("Hello.txt");
+    // printf("size from file is(%d,%d)",mfccRead.size(),mfccRead[0].size());
+     dtwResult1=DTW(mfccData,mfccRead);
+     printf("\nCompare with hello=%f " ,dtwResult1);
+     mfccRead.clear();
+    mfccRead=readFile("Hi.txt");
+     dtwResult2=DTW(mfccData,mfccRead);
+    printf("\nCompare with hi=%f " ,dtwResult2);
+     mfccRead.clear();
+     mfccRead=readFile("Dr.txt");
+     dtwResult3=DTW(mfccData,mfccRead);
+    printf("\nCompare with Dr=%f" ,dtwResult3);
+    mfccRead.clear();
+    //usually in my experment match occurs when dtwResult<8000
+    if((dtwResult1<dtwResult2)&&(dtwResult1<dtwResult3)&&(dtwResult1<8000)){
+        printf("\n\n\nHello there...\n");
+    }
+    else if((dtwResult2<dtwResult1)&&(dtwResult2<dtwResult3)&&(dtwResult2<8000)){
+        printf("\n\n\n\Hi there...\n");
+    }
+    else if((dtwResult3<dtwResult1)&&(dtwResult3<dtwResult2)&&(dtwResult3<8000)){
+        printf("\n\n\nYes Sir...\n");
+    }
+    else{
+        printf("\n\n\nHmm...\n");
+    }
     /* Write recorded data to a file. */
 #if WRITE_TO_FILE
     {
@@ -303,17 +363,17 @@ int main(void)
 #endif
 /* find MFCC2
  */
-  findMfcc(data.recordedSamples,numSamples);
+ // findMfcc(data.recordedSamples,numSamples);
 //
-    /* Playback recorded data.  -------------------------------------------- */
-    data.frameIndex = 0;
+  /*  /* Playback recorded data.  -------------------------------------------- */
+    /*data.frameIndex = 0;
 
-    outputParameters.device = Pa_GetDefaultOutputDevice(); /* default output device */
+    outputParameters.device = Pa_GetDefaultOutputDevice(); //default output device 
     if (outputParameters.device == paNoDevice) {
         fprintf(stderr,"Error: No default output device.\n");
         goto done;
     }
-    outputParameters.channelCount = 2;                     /* stereo output */
+    outputParameters.channelCount = 2;                     //stereo output 
     outputParameters.sampleFormat =  PA_SAMPLE_TYPE;
     outputParameters.suggestedLatency = Pa_GetDeviceInfo( outputParameters.device )->defaultLowOutputLatency;
     outputParameters.hostApiSpecificStreamInfo = NULL;
@@ -321,11 +381,11 @@ int main(void)
     printf("\n=== Now playing back. ===\n"); fflush(stdout);
     err = Pa_OpenStream(
               &stream,
-              NULL, /* no input */
+              NULL,
               &outputParameters,
               SAMPLE_RATE,
               FRAMES_PER_BUFFER,
-              paClipOff,      /* we won't output out of range samples so don't bother clipping them */
+              paClipOff,     
               playCallback,
               &data );
     if( err != paNoError ) goto done;
@@ -345,17 +405,17 @@ int main(void)
         
         printf("Done.\n"); fflush(stdout);
     }
-
+*/
 done:
     Pa_Terminate();
-    if( data.recordedSamples )       /* Sure it is NULL or valid. */
+    if( data.recordedSamples )       
         free( data.recordedSamples );
     if( err != paNoError )
     {
         fprintf( stderr, "An error occured while using the portaudio stream\n" );
         fprintf( stderr, "Error number: %d\n", err );
         fprintf( stderr, "Error message: %s\n", Pa_GetErrorText( err ) );
-        err = 1;          /* Always return 0 or 1, but no other return codes. */
+        err = 1;         
     }
     return err;
 }
